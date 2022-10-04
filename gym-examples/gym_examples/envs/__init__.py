@@ -1,1 +1,2 @@
-from gym_examples.envs.grid_world import GridWorldEnv
+from gym_examples.envs.grid_world_target import GridWorldTargetEnv
+from gym_examples.envs.grid_world_coverage import GridWorldCoverageEnv

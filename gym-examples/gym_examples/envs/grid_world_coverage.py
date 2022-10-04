@@ -4,11 +4,13 @@ import pygame
 import numpy as np
 import random
 
+from gym.spaces import MultiBinary, Box
 
-class GridWorldEnv(gym.Env):
+
+class GridWorldCoverageEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, size=5):
+    def __init__(self, render_mode=None, size=10):
         self.size = size  # The size of the square grid
         self.window_size = 512  # The size of the PyGame window
 
@@ -16,7 +18,10 @@ class GridWorldEnv(gym.Env):
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
-        self.observation_space = spaces.Box(low=-2, high=2, shape=(size, size), dtype=np.int)
+        self.observation_space = spaces.Dict({"map": Box(low=0, high=1, shape=[self.size,self.size], dtype=np.int),#MultiBinary([self.size, self.size]),
+                                              "agent": Box(low=0, high=1, shape=[self.size,self.size], dtype=np.int),
+                                              "remaining": Box(low=0, high=self.size * self.size, shape=[(1)], dtype=np.int)
+                                              })  # Box(low=-1, high=2, shape=(size, size), dtype=np.int)
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         self.action_space = spaces.Discrete(4)
 
@@ -46,53 +51,29 @@ class GridWorldEnv(gym.Env):
         self.clock = None
 
     def _get_obs(self):
-        # print(self.map)
-        return self.map
+        #print(self.agent_map)
+        return {
+            "map": self.map ,
+            "agent" :self.agent_map ,
+            "remaining": np.array([self.remaining])
+        }
 
     def _get_info(self):
         return {
-            "distance": np.linalg.norm(
-                self._agent_location - self._target_location, ord=1
-            )
+            "Covered": self.size * self.size - np.count_nonzero(self.map)
         }
 
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
         # super().reset(seed=seed)
         self.map = np.zeros((self.size, self.size), dtype=int)
+        self.agent_map = np.zeros((self.size, self.size), dtype=int)
         self.time_steps = 0
-        self.last_direction=np.array([0,0])
-
+        self.remaining=self.size*self.size
+        self.last_direction = np.array([0, 0])
         # Choose the agent's location uniformly at randomself._agent_location = np.random.randint(1, self.size, size=2)
         self._agent_location = np.random.randint(1, self.size, size=2)
-
-        # We will sample the target's location randomly until it does not coincide with the agent's location
-        self._target_location = self._agent_location
-        while np.array_equal(self._target_location, self._agent_location):
-            self._target_location = np.random.randint(2, self.size-1, size=2)
-
-        self.map[self._target_location[1], self._target_location[0]] = 2
-
-        self._obstacle_location = np.zeros((4, 2))
-        fora=np.random.randint(0,4,dtype=int);
-        i = 0
-        self._obstacle_location[0]=self._target_location + np.array([0,1])
-        self._obstacle_location[1] = self._target_location + np.array([0, -1])
-        self._obstacle_location[2] = self._target_location + np.array([1, 0])
-        self._obstacle_location[3] = self._target_location + np.array([-1, 0])
-        self._obstacle_location=np.delete(self._obstacle_location, fora, axis=0)
-
-
-
-        while i < 3:
-            self.map[int(self._obstacle_location[i, 1]), int(self._obstacle_location[i, 0])] = -1
-            i = i + 1
-        done=False
-        while not done:
-            self._agent_location = np.random.randint(1, self.size, size=2)
-            if self.map[self._agent_location[1],self._agent_location[0]]==0:
-                done=True
-                self.map[self._agent_location[1], self._agent_location[0]] =1
+        self.agent_map[self._agent_location[1], self._agent_location[0]] = 1
 
         observation = self._get_obs()
         info = self._get_info()
@@ -107,51 +88,34 @@ class GridWorldEnv(gym.Env):
         self.time_steps = self.time_steps + 1;
         reward = 0
         direction = self._action_to_direction[action]
-        if (direction==-1*self.last_direction).all:
-            reward = reward -1/self.size
-        self.last_direction=direction
-        self.map[self._agent_location[1], self._agent_location[0]] = 0
-
-        if ((self._agent_location + direction) < 0).any() or ((self._agent_location + direction) > self.size).any():
-            reward = reward - 1/self.size
+        if (direction == -1 * self.last_direction).all:
+            reward = reward - 1 / self.size
+        self.last_direction = direction
+        self.agent_map[self._agent_location[1], self._agent_location[0]] = 0
+        if ((self._agent_location + direction) < 0).any() or ((self._agent_location + direction) >= self.size).any():
+            reward = reward - 1 / self.size
 
         # We use `np.clip` to make sure we don't leave the gridCheck
         self._agent_location = np.clip(
             self._agent_location + direction, 0, self.size - 1
         )
+        if self.map[self._agent_location[1], self._agent_location[0]] == 0:
+            reward = reward + 1 / self.size
+        self.agent_map[self._agent_location[1], self._agent_location[0]] = 1
         self.map[self._agent_location[1], self._agent_location[0]] = 1
+        self.remaining=self.size*self.size-np.count_nonzero(self.map)
+        terminated = self.remaining==0
 
-        # An episode is done iff the agent has reached the target
-        terminated = np.array_equal(self._agent_location, self._target_location)
         if terminated:
-            reward = reward + self.size
-        else:
-            reward = reward - 1/self.size
-        i = 0;
-        while i < 3:
-            colision = np.array_equal(self._agent_location, self._obstacle_location[i])
-            if colision:
-                reward = reward-self.size
-            i += 1
-            colision=False
-
-        if (self.time_steps > self.size * self.size * self.size * self.size * self.size * 100):
-            terminated = True
+            reward = reward + 1 * self.size
 
         observation = self._get_obs()
         info = self._get_info()
-        i=0
-        #while i<3:
-         #   self.map[int(self._obstacle_location[i,1]) , int(self._obstacle_location[i,0])]=-1
-          #  i=i+1;
-        dist = info.get('distance')
-        # if(dist>0):
-        #    reward=reward+1/dist*3
+        # dist = info.get('distance')
+
         if self.render_mode == "human":
             self._render_frame()
-
-
-
+            print(reward)
 
         return observation, reward, terminated, info
 
@@ -174,23 +138,18 @@ class GridWorldEnv(gym.Env):
         )  # The size of a single grid square in pixels
 
         # First we draw the target
-        pygame.draw.rect(
-            canvas,
-            (255, 0, 0),
-            pygame.Rect(
-                pix_square_size * self._target_location,
-                (pix_square_size, pix_square_size),
-            ),
-        )
-        for i in range(3):
-            pygame.draw.rect(
-                canvas,
-                (0, 0, 0),
-                pygame.Rect(
-                    pix_square_size * self._obstacle_location[i],
-                    (pix_square_size, pix_square_size),
-                ),
-            )
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.map[i, j] == 1:
+                    pygame.draw.rect(
+                        canvas,
+                        (255, 0, 0),
+                        pygame.Rect(
+                            pix_square_size * np.array([j, i]),
+                            (pix_square_size, pix_square_size),
+                        ),
+                    )
+
         # Now we draw the agent
         pygame.draw.circle(
             canvas,
