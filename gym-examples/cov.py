@@ -14,7 +14,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
-eval_env = gym.make('gym_examples/GridWorldCoverage-v0',render_mode=None,size=5)
+eval_env = gym.make('gym_examples/GridWorldCoverage-v0',render_mode="human",size=5)
 #eval_env = FlattenObservation(eval_env)
 eval_env=Monitor(eval_env)
 model = PPO.load("PPO-Coverage", env=eval_env)

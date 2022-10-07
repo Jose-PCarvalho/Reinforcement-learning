@@ -131,7 +131,7 @@ class GridWorldCoverageEnv(gym.Env):
     def _render_frame(self):
         if self.window is None and self.render_mode == "human":
             pygame.init()
-            #pygame.display.init()
+            pygame.display.init()
             self.window = pygame.display.set_mode((self.window_size, self.window_size))
         if self.clock is None and self.render_mode == "human":
             self.clock = pygame.time.Clock()
