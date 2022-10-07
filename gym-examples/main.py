@@ -45,7 +45,7 @@ eval_callback = EvalCallback(eval_env, eval_freq=10000000000, callback_after_eva
 
 model = PPO('MultiInputPolicy', env, verbose = 1, device='cpu',learning_rate=0.0002,gamma=0.995)
 
-model.learn(total_timesteps=10000000, callback=eval_callback)
+model.learn(total_timesteps=150000, callback=eval_callback)
 model.save('PPO-Coverage')
 env = gym.make('gym_examples/GridWorldCoverage-v0',render_mode="human",size=5)
 env=TimeLimit(env,max_episode_steps=5*5*5*5*100)

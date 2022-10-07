@@ -74,6 +74,7 @@ class GridWorldCoverageEnv(gym.Env):
         # Choose the agent's location uniformly at randomself._agent_location = np.random.randint(1, self.size, size=2)
         self._agent_location = np.random.randint(1, self.size, size=2)
         self.agent_map[self._agent_location[1], self._agent_location[0]] = 1
+        self.map[self._agent_location[1], self._agent_location[0]] = 1
 
         observation = self._get_obs()
         info = self._get_info()
@@ -88,7 +89,8 @@ class GridWorldCoverageEnv(gym.Env):
         self.time_steps = self.time_steps + 1;
         reward = 0
         direction = self._action_to_direction[action]
-        if (direction == -1 * self.last_direction).all:
+        if (direction == (-1 * self.last_direction)).all==True:
+            print(direction,-1*self.last_direction)
             reward = reward - 1 / self.size
         self.last_direction = direction
         self.agent_map[self._agent_location[1], self._agent_location[0]] = 0
@@ -101,6 +103,9 @@ class GridWorldCoverageEnv(gym.Env):
         )
         if self.map[self._agent_location[1], self._agent_location[0]] == 0:
             reward = reward + 1 / self.size
+            #print(reward)
+        else :
+          reward = reward - 1 / self.size
         self.agent_map[self._agent_location[1], self._agent_location[0]] = 1
         self.map[self._agent_location[1], self._agent_location[0]] = 1
         self.remaining=self.size*self.size-np.count_nonzero(self.map)
@@ -126,7 +131,7 @@ class GridWorldCoverageEnv(gym.Env):
     def _render_frame(self):
         if self.window is None and self.render_mode == "human":
             pygame.init()
-            pygame.display.init()
+            #pygame.display.init()
             self.window = pygame.display.set_mode((self.window_size, self.window_size))
         if self.clock is None and self.render_mode == "human":
             self.clock = pygame.time.Clock()
@@ -180,7 +185,8 @@ class GridWorldCoverageEnv(gym.Env):
             self.window.blit(canvas, canvas.get_rect())
             pygame.event.pump()
             pygame.display.update()
-            print(self.map)
+            #print(self.map)
+
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
             # The following line will automatically add a delay to keep the framerate stable.
