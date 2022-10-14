@@ -10,7 +10,7 @@ from gym.spaces import MultiBinary, Box
 class GridWorldCoverageEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, size=10):
+    def __init__(self, cenas,render_mode=None, size=5):
         self.size = size  # The size of the square grid
         self.window_size = 512  # The size of the PyGame window
 
@@ -18,8 +18,8 @@ class GridWorldCoverageEnv(gym.Env):
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
-        self.observation_space = spaces.Dict({"map": Box(low=0, high=1, shape=[self.size,self.size], dtype=np.int),#MultiBinary([self.size, self.size]),
-                                              "agent": Box(low=0, high=1, shape=[self.size,self.size], dtype=np.int),
+        self.observation_space = spaces.Dict({"map": MultiBinary([self.size, self.size]),
+                                              "agent": MultiBinary([self.size,self.size]),
                                               "remaining": Box(low=0, high=self.size * self.size, shape=[(1)], dtype=np.int)
                                               })  # Box(low=-1, high=2, shape=(size, size), dtype=np.int)
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
@@ -36,6 +36,7 @@ class GridWorldCoverageEnv(gym.Env):
             2: np.array([-1, 0]),
             3: np.array([0, -1]),
         }
+        print(render_mode)
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
@@ -95,24 +96,24 @@ class GridWorldCoverageEnv(gym.Env):
         self.last_direction = direction
         self.agent_map[self._agent_location[1], self._agent_location[0]] = 0
         if ((self._agent_location + direction) < 0).any() or ((self._agent_location + direction) >= self.size).any():
-            reward = reward - 1 / self.size
+            reward = reward - 1 / (self.size*self.size)
 
         # We use `np.clip` to make sure we don't leave the gridCheck
         self._agent_location = np.clip(
             self._agent_location + direction, 0, self.size - 1
         )
         if self.map[self._agent_location[1], self._agent_location[0]] == 0:
-            reward = reward + 1 / self.size
+            reward = reward + 1 / (self.size*self.size)
             #print(reward)
         else :
-          reward = reward - 1 / self.size
+            reward = reward - 1 / (self.size*self.size)
         self.agent_map[self._agent_location[1], self._agent_location[0]] = 1
         self.map[self._agent_location[1], self._agent_location[0]] = 1
         self.remaining=self.size*self.size-np.count_nonzero(self.map)
         terminated = self.remaining==0
 
         if terminated:
-            reward = reward + 1 * self.size
+            reward = reward + 1
 
         observation = self._get_obs()
         info = self._get_info()
