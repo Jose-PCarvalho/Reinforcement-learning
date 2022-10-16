@@ -18,9 +18,11 @@ from stable_baselines3.common.evaluation import evaluate_policy
 import gym
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3 import A2C
-env = gym.make('gym_examples/GridWorldCoverage-v0',size=5)
+env = gym.make('gym_examples/GridWorldCoverage-v0',cenas="",size=5)
 env.action_space.sample()
+print(env.observation_space.sample())
 
+"""
 episodes = 10
 for episode in range(1, episodes + 1):
     state = env.reset()
@@ -54,4 +56,4 @@ env=TimeLimit(env,max_episode_steps=5*5*5*5)
 #env=Monitor(env)
 #mean_reward, std_reward =evaluate_policy(model, env, n_eval_episodes=10000)
 #print(mean_reward,std_reward)
-
+"""
